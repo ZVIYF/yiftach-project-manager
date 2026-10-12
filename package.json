@@ -12,10 +12,14 @@
     "migrate:dry-run": "tsx scripts/migrate-legacy-data.ts --dry-run"
   },
   "dependencies": {
-    "firebase": "^10.13.2"
+    "firebase": "^10.13.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.8"
