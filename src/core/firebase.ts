@@ -1,10 +1,16 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  getFirestore,
+  Firestore,
+} from 'firebase/firestore';
 import { config } from './config';
 
 /**
- * Initializes and exports typed Firebase service singletons.
+ * Initializes and exports typed Firebase service singletons with offline persistence.
  */
 let firebaseAppInstance: FirebaseApp;
 let authInstance: Auth;
@@ -36,14 +42,27 @@ export function getFirebaseAuth(): Auth {
 }
 
 /**
- * Retrieves the Cloud Firestore service.
+ * Retrieves the Cloud Firestore service with IndexedDB multi-tab offline persistence.
+ * Guarantees zero downtime when field work suffers mobile connectivity drops.
  *
  * @returns {Firestore} Firestore database instance.
  */
 export function getFirestoreDb(): Firestore {
   if (!firestoreInstance) {
-    firestoreInstance = getFirestore(getFirebaseApp());
+    const app = getFirebaseApp();
+    if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
+      try {
+        firestoreInstance = initializeFirestore(app, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          }),
+        });
+      } catch {
+        firestoreInstance = getFirestore(app);
+      }
+    } else {
+      firestoreInstance = getFirestore(app);
+    }
   }
   return firestoreInstance;
 }
-

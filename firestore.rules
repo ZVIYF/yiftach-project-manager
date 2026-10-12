@@ -1,0 +1,290 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: allowed_users
+    // Document ID: email (lowercase string)
+    // Fields:
+    //   - email: string (required, valid email, <= 100 chars)
+    //   - role: string (optional, in ['admin', 'partner', 'viewer'])
+    //   - isActive: bool (optional)
+    //   - displayName: string (optional, <= 100 chars)
+    //   - createdAt: string (optional, <= 50 chars)
+    //   - updatedAt: string (optional, <= 50 chars)
+    //
+    // Collection: projects
+    // Document ID: projectId (string, <= 100 chars)
+    // Fields:
+    //   - id: string (required, matches doc ID, <= 100 chars) [immutable]
+    //   - name: string (required, 1-200 chars)
+    //   - clientName: string (required, 1-100 chars)
+    //   - clientPhone: string (optional, <= 50 chars)
+    //   - address: string (optional, <= 300 chars)
+    //   - status: string (required, in ['draft', 'active', 'completed', 'paused'])
+    //   - phases: list (optional, <= 100 items)
+    //   - budgetTotal: number (required, >= 0)
+    //   - shareToken: string (optional, <= 100 chars)
+    //   - shareOptions: list (optional, <= 50 items)
+    //   - driveFolderId: string (optional, <= 150 chars)
+    //   - createdAt: string (required, <= 50 chars) [immutable]
+    //   - updatedAt: string (required, <= 50 chars)
+    //
+    // Collection: finances
+    // Document ID: transactionId (string, <= 100 chars)
+    // Fields:
+    //   - id: string (required, matches doc ID, <= 100 chars) [immutable]
+    //   - date: string (required, 1-40 chars)
+    //   - amount: number (required, >= 0)
+    //   - description: string (required, <= 500 chars)
+    //   - type: string (required, in ['income', 'expense', 'withdrawal', 'reimbursement'])
+    //   - owner: string (required, 1-100 chars)
+    //   - projectId: string (optional, <= 100 chars)
+    //   - phaseId: string (optional, <= 100 chars)
+    //   - passThrough: bool (optional)
+    //   - paidBy: string (optional, <= 100 chars)
+    //   - paidTo: string (optional, <= 100 chars)
+    //   - depositedTo: string (optional, <= 100 chars)
+    //   - paymentMethod: string (optional, <= 50 chars)
+    //   - receiptUrl: string (optional, <= 2000 chars)
+    //   - createdAt: string (required, <= 50 chars) [immutable]
+    //   - updatedAt: string (required, <= 50 chars)
+    //
+    // Collection: debts
+    // Document ID: debtId (string, <= 100 chars)
+    // Fields:
+    //   - id: string (required, matches doc ID, <= 100 chars) [immutable]
+    //   - description: string (required, <= 500 chars)
+    //   - amount: number (required, >= 0)
+    //   - owner: string (required, 1-100 chars)
+    //   - projectId: string (optional, <= 100 chars)
+    //   - status: string (required, in ['open', 'settled', 'partial'])
+    //   - notes: string (optional, <= 2000 chars)
+    //   - createdAt: string (required, <= 50 chars) [immutable]
+    //   - updatedAt: string (required, <= 50 chars)
+    //
+    // Collection: system
+    // Document ID: docId (string, e.g. 'settings')
+    // Fields:
+    //   - vatRatePercentage: number (optional, >= 0, <= 100)
+    //   - partners: map (optional)
+    //   - businessProfile: map (optional)
+    //
+    // Collection: publicShares
+    // Document ID: shareToken (string)
+    // Fields:
+    //   - snapshot or direct progress/quote snapshot data
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isAuthorized() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())) &&
+        get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())).data.isActive != false;
+    }
+
+    function isSelf(email) {
+      return isAuthenticated() && request.auth.token.email.lower() == email.lower();
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidAllowedUser(email) {
+      let data = request.resource.data;
+      return data.email is string &&
+        data.email.lower() == email.lower() &&
+        data.email.size() <= 100 &&
+        (!('role' in data) || (data.role is string && data.role in ['admin', 'partner', 'viewer'])) &&
+        (!('isActive' in data) || data.isActive is bool) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    function isValidProject(projectId) {
+      let data = request.resource.data;
+      return data.id is string &&
+        data.id == projectId &&
+        data.id.size() <= 100 &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 200 &&
+        data.clientName is string &&
+        data.clientName.size() > 0 &&
+        data.clientName.size() <= 100 &&
+        data.status is string &&
+        data.status in ['draft', 'active', 'completed', 'paused'] &&
+        data.budgetTotal is number &&
+        data.budgetTotal >= 0 &&
+        data.createdAt is string &&
+        data.createdAt.size() <= 50 &&
+        data.updatedAt is string &&
+        data.updatedAt.size() <= 50 &&
+        (!('clientPhone' in data) || (data.clientPhone is string && data.clientPhone.size() <= 50)) &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+        (!('phases' in data) || (data.phases is list && data.phases.size() <= 100)) &&
+        (!('shareToken' in data) || (data.shareToken is string && data.shareToken.size() <= 100)) &&
+        (!('shareOptions' in data) || (data.shareOptions is list && data.shareOptions.size() <= 50)) &&
+        (!('driveFolderId' in data) || (data.driveFolderId is string && data.driveFolderId.size() <= 150));
+    }
+
+    function areImmutableProjectFieldsUnchanged() {
+      return request.resource.data.id == resource.data.id &&
+        (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+    }
+
+    function isValidFinance(transactionId) {
+      let data = request.resource.data;
+      return data.id is string &&
+        data.id == transactionId &&
+        data.id.size() <= 100 &&
+        data.date is string &&
+        data.date.size() > 0 &&
+        data.date.size() <= 40 &&
+        data.amount is number &&
+        data.amount >= 0 &&
+        data.description is string &&
+        data.description.size() <= 500 &&
+        data.type is string &&
+        data.type in ['income', 'expense', 'withdrawal', 'reimbursement'] &&
+        data.owner is string &&
+        data.owner.size() > 0 &&
+        data.owner.size() <= 100 &&
+        data.createdAt is string &&
+        data.createdAt.size() <= 50 &&
+        data.updatedAt is string &&
+        data.updatedAt.size() <= 50 &&
+        (!('projectId' in data) || (data.projectId is string && data.projectId.size() <= 100)) &&
+        (!('phaseId' in data) || (data.phaseId is string && data.phaseId.size() <= 100)) &&
+        (!('passThrough' in data) || data.passThrough is bool) &&
+        (!('paidBy' in data) || (data.paidBy is string && data.paidBy.size() <= 100)) &&
+        (!('paidTo' in data) || (data.paidTo is string && data.paidTo.size() <= 100)) &&
+        (!('depositedTo' in data) || (data.depositedTo is string && data.depositedTo.size() <= 100)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 50)) &&
+        (!('receiptUrl' in data) || (data.receiptUrl is string && data.receiptUrl.size() <= 2000));
+    }
+
+    function areImmutableFinanceFieldsUnchanged() {
+      return request.resource.data.id == resource.data.id &&
+        (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+    }
+
+    function isValidDebt(debtId) {
+      let data = request.resource.data;
+      return data.id is string &&
+        data.id == debtId &&
+        data.id.size() <= 100 &&
+        data.description is string &&
+        data.description.size() <= 500 &&
+        data.amount is number &&
+        data.amount >= 0 &&
+        data.owner is string &&
+        data.owner.size() > 0 &&
+        data.owner.size() <= 100 &&
+        data.status is string &&
+        data.status in ['open', 'settled', 'partial'] &&
+        data.createdAt is string &&
+        data.createdAt.size() <= 50 &&
+        data.updatedAt is string &&
+        data.updatedAt.size() <= 50 &&
+        (!('projectId' in data) || (data.projectId is string && data.projectId.size() <= 100)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000));
+    }
+
+    function areImmutableDebtFieldsUnchanged() {
+      return request.resource.data.id == resource.data.id &&
+        (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt);
+    }
+
+    function isValidSystemDoc() {
+      let data = request.resource.data;
+      return data.size() <= 30 &&
+        (!('vatRatePercentage' in data) || (data.vatRatePercentage is number && data.vatRatePercentage >= 0 && data.vatRatePercentage <= 100)) &&
+        (!('partners' in data) || data.partners is map) &&
+        (!('businessProfile' in data) || data.businessProfile is map);
+    }
+
+    function isValidPublicShare() {
+      let data = request.resource.data;
+      return data.size() <= 30 &&
+        (!('name' in data) || (data.name is string && data.name.size() <= 200)) &&
+        (!('clientName' in data) || (data.clientName is string && data.clientName.size() <= 100)) &&
+        (!('budgetTotal' in data) || data.budgetTotal is number) &&
+        (!('phases' in data) || (data.phases is list && data.phases.size() <= 100)) &&
+        (!('quotes' in data) || (data.quotes is list && data.quotes.size() <= 100)) &&
+        (!('snapshot' in data) || data.snapshot is map);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Allowed Users directory
+    match /allowed_users/{email} {
+      allow read: if isAuthenticated() && (isSelf(email) || isAuthorized());
+      allow create: if isAuthorized() && isValidAllowedUser(email);
+      allow update: if isAuthorized() && isValidAllowedUser(email);
+      allow delete: if isAuthorized();
+    }
+
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && isValidProject(projectId);
+      allow update: if isAuthorized() && isValidProject(projectId) && areImmutableProjectFieldsUnchanged();
+      allow delete: if isAuthorized();
+    }
+
+    // Financial ledger transactions
+    match /finances/{transactionId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && isValidFinance(transactionId);
+      allow update: if isAuthorized() && isValidFinance(transactionId) && areImmutableFinanceFieldsUnchanged();
+      allow delete: if isAuthorized();
+    }
+
+    // Debts tracking
+    match /debts/{debtId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && isValidDebt(debtId);
+      allow update: if isAuthorized() && isValidDebt(debtId) && areImmutableDebtFieldsUnchanged();
+      allow delete: if isAuthorized();
+    }
+
+    // Global system settings
+    match /system/{docId} {
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && isValidSystemDoc();
+      allow update: if isAuthorized() && isValidSystemDoc();
+      allow delete: if isAuthorized();
+    }
+
+    // Public share snapshots (customer quotes & progress)
+    match /publicShares/{shareToken} {
+      allow read: if true;
+      allow create: if isAuthorized() && isValidPublicShare();
+      allow update: if isAuthorized() && isValidPublicShare();
+      allow delete: if isAuthorized();
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
