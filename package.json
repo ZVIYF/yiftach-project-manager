@@ -12,7 +12,8 @@
     "migrate:dry-run": "tsx scripts/migrate-legacy-data.ts --dry-run"
   },
   "dependencies": {
-    "firebase": "^10.13.2"
+    "firebase": "^10.13.2",
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
