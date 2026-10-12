@@ -5,23 +5,20 @@ A modular, secure Progressive Web Application (PWA) for construction and renovat
 ## Architecture Overview
 - **Frontend:** Modular Single Page Application (Vite + TypeScript + CSS Modules / Design Tokens)
 - **Typography & Locale:** Heebo Google Font with native RTL support (`dir="rtl"`, Hebrew interface)
-- **Hosting & Edge Functions:** Cloudflare Pages (`/functions/api/`)
-- **Object Storage:** Cloudflare R2 bucket (`GAVSTACK_FILES`)
+- **Hosting:** Cloudflare Pages (Pure Static SPA)
 - **Database & Auth:** Google Firebase (Cloud Firestore & Firebase Authentication)
 
 ## Project Structure
 ```text
-├── functions/             # Cloudflare Pages Edge Functions
-│   └── api/               # API endpoints (/api/health, /api/upload)
 ├── src/
 │   ├── core/              # Global configs, Firebase setup, SPA Router
 │   ├── types/             # Strict TypeScript domain interfaces
-│   ├── services/          # Storage, Firestore, and Drive services
+│   ├── services/          # Client-side services
 │   ├── modules/           # Domain feature modules (Auth, Projects, Finances, Debts)
 │   ├── styles/            # RTL typography and design tokens
 │   └── main.ts            # Application bootstrap
+├── public/                # Static assets, PWA manifest, service worker, _redirects
 ├── scripts/               # Maintenance and migration tooling
-├── wrangler.toml          # Cloudflare Pages deployment configuration
 └── vite.config.ts         # Vite build configuration
 ```
 
