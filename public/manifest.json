@@ -1,0 +1,23 @@
+{
+  "id": "/",
+  "name": "יפתח - ניהול פרויקטים",
+  "short_name": "פרויקטים",
+  "description": "מערכת ניהול פרויקטים וכספים לקבלני שיפוצים",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f8fafc",
+  "theme_color": "#1e3a8a",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
