@@ -7,16 +7,18 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx scripts/migrate-legacy-data.ts",
+    "migrate:dry-run": "tsx scripts/migrate-legacy-data.ts --dry-run"
   },
   "dependencies": {
     "firebase": "^10.13.2"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
+    "tsx": "^4.19.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.8",
     "wrangler": "^3.80.0"
   }
 }
-
