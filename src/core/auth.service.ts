@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from './firebase';
-import { AppUser, AuthState } from '../types/auth.types';
+import { AppUser, AuthState, UserRole } from '../types/auth.types';
 import { OperationResult } from '../types/common.types';
 
 export type AuthStateListener = (state: AuthState) => void;
@@ -93,34 +93,50 @@ export class AuthService {
   }
 
   /**
-   * Validates user membership in the secure Firestore allowed_users collection.
+   * Validates user membership and role from Firestore 'users' or 'allowed_users' collections.
    */
   private async verifyUserAuthorization(user: FirebaseUser): Promise<AppUser> {
     const db = getFirestoreDb();
     const normalizedEmail = (user.email || '').toLowerCase().trim();
 
     try {
-      const allowedDocRef = doc(db, 'allowed_users', normalizedEmail);
-      const allowedDoc = await getDoc(allowedDocRef);
+      // 1. Check primary 'users' collection by uid (Role-Based Access Control)
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
 
-      if (!allowedDoc.exists()) {
+      if (userDoc.exists()) {
+        const data = userDoc.data() as { role?: UserRole; isActive?: boolean; displayName?: string };
+        const isAllowed = data.isActive !== false;
         return {
           id: user.uid,
           email: normalizedEmail,
-          role: 'viewer',
-          isAuthorized: false,
+          displayName: data.displayName || user.displayName || undefined,
+          role: data.role || 'member',
+          isAuthorized: isAllowed,
         };
       }
 
-      const data = allowedDoc.data() as { role?: 'admin' | 'partner' | 'viewer'; isActive?: boolean };
-      const isAllowed = data.isActive !== false;
+      // 2. Fallback to 'allowed_users' collection by email (backward compatibility)
+      const allowedDocRef = doc(db, 'allowed_users', normalizedEmail);
+      const allowedDoc = await getDoc(allowedDocRef);
+
+      if (allowedDoc.exists()) {
+        const data = allowedDoc.data() as { role?: UserRole; isActive?: boolean; displayName?: string };
+        const isAllowed = data.isActive !== false;
+        return {
+          id: user.uid,
+          email: normalizedEmail,
+          displayName: data.displayName || user.displayName || undefined,
+          role: data.role || 'partner',
+          isAuthorized: isAllowed,
+        };
+      }
 
       return {
         id: user.uid,
         email: normalizedEmail,
-        displayName: user.displayName || undefined,
-        role: data.role || 'partner',
-        isAuthorized: isAllowed,
+        role: 'viewer',
+        isAuthorized: false,
       };
     } catch {
       // In strict security mode, any read error or missing record denies authorization

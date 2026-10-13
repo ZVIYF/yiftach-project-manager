@@ -1,5 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirestoreDb } from '../../core/firebase';
+import { escapeHtml } from '../../core/security';
 
 interface ShareSnapshotData {
   name: string;
@@ -49,8 +50,8 @@ export async function renderPublicShareView(container: HTMLElement, shareToken: 
     card.innerHTML = `
       <div style="border-bottom: 1px solid var(--color-border); padding-bottom: 1rem; margin-bottom: 1.5rem; text-align: center;">
         <span style="font-size: 0.8rem; background: var(--color-primary-light); color: var(--color-primary); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); font-weight: 600;">סטטוס פרויקט לקוח</span>
-        <h2 style="font-size: 1.4rem; font-weight: 700; margin-top: 0.5rem;">${data.name || 'פרויקט שיפוצים'}</h2>
-        <p style="color: var(--color-text-muted); font-size: 0.9rem;">עבור: ${data.clientName || 'לקוח יקר'}</p>
+        <h2 style="font-size: 1.4rem; font-weight: 700; margin-top: 0.5rem;">${data.name ? escapeHtml(data.name) : 'פרויקט שיפוצים'}</h2>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem;">עבור: ${data.clientName ? escapeHtml(data.clientName) : 'לקוח יקר'}</p>
       </div>
 
       <!-- Phases checklist -->
@@ -60,7 +61,7 @@ export async function renderPublicShareView(container: HTMLElement, shareToken: 
           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             ${data.phases.map((p) => `
               <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--color-bg-body); border-radius: var(--radius-sm);">
-                <span>${p.name}</span>
+                <span>${escapeHtml(p.name)}</span>
                 <span class="badge ${p.isCompleted ? 'badge-success' : ''}" style="${!p.isCompleted ? 'background:#e2e8f0;color:#64748b;' : ''}">
                   ${p.isCompleted ? 'הושלם' : 'בתהליך'}
                 </span>

@@ -100,9 +100,12 @@ service cloud.firestore {
     }
 
     function isAuthorized() {
-      return isAuthenticated() &&
-        exists(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())) &&
-        get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())).data.isActive != false;
+      return isAuthenticated() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive != false) ||
+        (exists(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())) &&
+         get(/databases/$(database)/documents/allowed_users/$(request.auth.token.email.lower())).data.isActive != false)
+      );
     }
 
     function isSelf(email) {

@@ -1,5 +1,6 @@
 import { financesService } from './finances.service';
 import { FinancialTransaction, TransactionType, TransactionOwner } from '../../types/finance.types';
+import { escapeHtml } from '../../core/security';
 
 /**
  * Renders the Finances & Cashflow dashboard view.
@@ -145,8 +146,8 @@ function renderTxRow(tx: FinancialTransaction): string {
   return `
     <tr style="border-bottom: 1px solid var(--color-border);">
       <td style="padding: 0.5rem; color: var(--color-text-muted);">${tx.date}</td>
-      <td style="padding: 0.5rem;">${tx.description} ${tx.passThrough ? '<span class="badge" style="background:#fef3c7;color:#b45309;font-size:0.7rem;">מעבר</span>' : ''}</td>
-      <td style="padding: 0.5rem; font-size: 0.85rem;">${tx.owner}</td>
+      <td style="padding: 0.5rem;">${escapeHtml(tx.description)} ${tx.passThrough ? '<span class="badge" style="background:#fef3c7;color:#b45309;font-size:0.7rem;">מעבר</span>' : ''}</td>
+      <td style="padding: 0.5rem; font-size: 0.85rem;">${escapeHtml(tx.owner)}</td>
       <td style="padding: 0.5rem; text-align: left; font-weight: 600; color: ${color};">${prefix}${tx.amount.toLocaleString()} ₪</td>
     </tr>
   `;

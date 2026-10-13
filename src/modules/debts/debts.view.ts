@@ -1,5 +1,6 @@
 import { debtsService } from './debts.service';
 import { DebtRecord, TransactionOwner } from '../../types/finance.types';
+import { escapeHtml } from '../../core/security';
 
 /**
  * Renders the Debts management view and status toggle actions.
@@ -92,12 +93,12 @@ function renderDebtCard(debt: DebtRecord): string {
     <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; opacity: ${isSettled ? '0.6' : '1'};">
       <div>
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-          <h4 style="font-size: 1rem; font-weight: 600;">${debt.description}</h4>
+          <h4 style="font-size: 1rem; font-weight: 600;">${escapeHtml(debt.description)}</h4>
           <span class="badge ${isSettled ? 'badge-success' : ''}" style="${!isSettled ? 'background:#fee2e2;color:#b91c1c;' : ''}">
             ${isSettled ? 'הוסדר' : 'פתוח'}
           </span>
         </div>
-        <p style="font-size: 0.8rem; color: var(--color-text-muted);">${debt.owner} ${debt.notes ? `• ${debt.notes}` : ''}</p>
+        <p style="font-size: 0.8rem; color: var(--color-text-muted);">${escapeHtml(debt.owner)} ${debt.notes ? `• ${escapeHtml(debt.notes)}` : ''}</p>
       </div>
       <div style="display: flex; align-items: center; gap: 1rem;">
         <strong style="font-size: 1.1rem; color: var(--color-danger);">${debt.amount.toLocaleString()} ₪</strong>
