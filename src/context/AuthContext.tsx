@@ -106,9 +106,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signIn = async (email: string, password: string): Promise<void> => {
     setError(null);
+    const trimmedEmail = email ? email.trim() : '';
+    if (!trimmedEmail || !password) {
+      const errorMsg = 'נא למלא דואר אלקטרוני וסיסמה';
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
     const auth = getFirebaseAuth();
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await signInWithEmailAndPassword(auth, trimmedEmail, password);
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'ההתחברות נכשלה';
       setError(errorMsg);

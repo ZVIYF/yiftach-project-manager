@@ -9,20 +9,25 @@ export interface LoginPageProps {
  * Responsive Login Page supporting email and password authentication with Firebase.
  */
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
-  const { signIn, loading: authLoading } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (
+    e?: FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>
+  ): Promise<void> => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setErrorMessage(null);
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setErrorMessage('נא למלא את כל השדות');
+      setErrorMessage('נא למלא את כל השדות (דואר אלקטרוני וסיסמה)');
       return;
     }
 
@@ -31,16 +36,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
       await signIn(trimmedEmail, password);
       if (onSuccess) {
         onSuccess();
+      } else {
+        window.location.hash = 'dashboard';
       }
     } catch (err: unknown) {
       const firebaseError = err as { code?: string; message?: string };
       let friendlyError = 'פרטי התחברות שגויים או שגיאת תקשורת';
-      if (firebaseError.code === 'auth/user-not-found' || firebaseError.code === 'auth/wrong-password' || firebaseError.code === 'auth/invalid-credential') {
+      if (
+        firebaseError.code === 'auth/user-not-found' ||
+        firebaseError.code === 'auth/wrong-password' ||
+        firebaseError.code === 'auth/invalid-credential'
+      ) {
         friendlyError = 'כתובת אימייל או סיסמה שגויים';
       } else if (firebaseError.code === 'auth/too-many-requests') {
-        friendlyError = 'יותר מדי נסיונות כושלים. נסה שוב מאוחר יותר';
+        friendlyError = 'יותר מדי נסיונות כושלים. אנא נסה שוב בעוד מספר דקות';
       } else if (firebaseError.code === 'auth/invalid-email') {
         friendlyError = 'כתובת אימייל לא חוקית';
+      } else if (firebaseError.code === 'auth/network-request-failed') {
+        friendlyError = 'שגיאת רשת: לא ניתן להתחבר לשרת Firebase';
+      } else if (firebaseError.message) {
+        friendlyError = firebaseError.message;
       }
       setErrorMessage(friendlyError);
     } finally {
@@ -48,7 +63,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     }
   };
 
-  const isLoading = isSubmitting || authLoading;
+  // Only disable interaction during active credential submission
+  const isPending = isSubmitting;
 
   return (
     <div style={containerStyle}>
@@ -79,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               placeholder="name@example.com"
               required
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isPending}
               style={inputStyle}
             />
           </div>
@@ -97,7 +113,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
-                disabled={isLoading}
+                disabled={isPending}
                 style={passwordInputStyle}
               />
               <button
@@ -112,11 +128,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           </div>
 
           <button
+            id="login-submit-btn"
             type="submit"
-            disabled={isLoading}
-            style={isLoading ? buttonDisabledStyle : buttonStyle}
+            onClick={handleSubmit}
+            disabled={isPending}
+            style={isPending ? buttonDisabledStyle : buttonStyle}
           >
-            {isLoading ? 'מתחבר למערכת...' : 'התחבר למערכת'}
+            {isPending ? 'מתחבר למערכת...' : 'התחבר למערכת'}
           </button>
         </form>
       </div>
