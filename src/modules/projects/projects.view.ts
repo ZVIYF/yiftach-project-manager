@@ -1,5 +1,6 @@
 import { projectsService } from './projects.service';
 import { Project } from '../../types/project.types';
+import { escapeHtml } from '../../core/security';
 
 /**
  * Renders the Projects management view and modals.
@@ -110,11 +111,11 @@ function renderSingleProjectCard(project: Project): string {
     <div class="card" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
       <div>
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-          <h3 style="font-size: 1.1rem; font-weight: 600;">${project.name}</h3>
-          <span class="badge badge-success">${statusLabels[project.status] || project.status}</span>
+          <h3 style="font-size: 1.1rem; font-weight: 600;">${escapeHtml(project.name)}</h3>
+          <span class="badge badge-success">${escapeHtml(statusLabels[project.status] || project.status)}</span>
         </div>
         <p style="font-size: 0.85rem; color: var(--color-text-muted);">
-          לקוח: ${project.clientName} ${project.clientPhone ? `• ${project.clientPhone}` : ''}
+          לקוח: ${escapeHtml(project.clientName)} ${project.clientPhone ? `• ${escapeHtml(project.clientPhone)}` : ''}
         </p>
       </div>
       <div style="text-align: left;">
