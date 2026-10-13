@@ -51,6 +51,12 @@ export class AppModule {
     const currentHash = window.location.hash;
 
     if (!isAuthed && !currentHash.startsWith('#share')) {
+      const existingMain = document.getElementById('main-content');
+      // Preserve active login form and avoid unmounting DOM nodes while credentials are being validated
+      if (existingMain && (currentHash === '#login' || !currentHash)) {
+        return;
+      }
+
       this.container.innerHTML = `<main id="main-content" class="container"></main>`;
       const main = document.getElementById('main-content');
       if (main) renderLoginView(main);
